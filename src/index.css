@@ -163,12 +163,17 @@
   
   /* AI command bar glow effect */
   .command-glow {
-    @apply shadow-lg shadow-glow-primary/20;
+    box-shadow: 0 4px 20px hsl(var(--glow-primary));
   }
   
   /* FAB with subtle lift */
   .fab-lift {
-    @apply transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-primary/20;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .fab-lift:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 32px hsl(var(--glow-primary));
   }
   
   /* Semantic token highlights */
