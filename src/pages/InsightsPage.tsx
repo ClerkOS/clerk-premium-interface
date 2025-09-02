@@ -27,6 +27,30 @@ const PremiumCursorInsights = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    // Check if fullscreen API is available
+    console.log('Fullscreen API check:');
+    console.log('- Standard requestFullscreen:', !!document.documentElement.requestFullscreen);
+    console.log('- Webkit requestFullscreen:', !!(document.documentElement as any).webkitRequestFullscreen);
+    console.log('- MS requestFullscreen:', !!(document.documentElement as any).msRequestFullscreen);
+    console.log('- Document fullscreenElement:', document.fullscreenElement);
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   // Enhanced insights data with more interactive elements
   const insights = [
     {
@@ -148,8 +172,45 @@ ORDER BY avg_equity_ratio DESC;`,
     setTimeout(() => setIsExporting(false), 2000);
   }, []);
 
-  const handleFullscreen = useCallback(() => {
-    setIsFullscreen(!isFullscreen);
+  const handleFullscreen = useCallback(async () => {
+    console.log('Fullscreen button clicked! Current state:', isFullscreen);
+    try {
+      if (!isFullscreen) {
+        console.log('Attempting to enter fullscreen...');
+        // Enter fullscreen
+        if (document.documentElement.requestFullscreen) {
+          console.log('Using standard requestFullscreen');
+          await document.documentElement.requestFullscreen();
+        } else if ((document.documentElement as any).webkitRequestFullscreen) {
+          console.log('Using webkit requestFullscreen');
+          await (document.documentElement as any).webkitRequestFullscreen();
+        } else if ((document.documentElement as any).msRequestFullscreen) {
+          console.log('Using ms requestFullscreen');
+          await (document.documentElement as any).msRequestFullscreen();
+        }
+        console.log('Fullscreen entered successfully');
+        setIsFullscreen(true);
+      } else {
+        console.log('Attempting to exit fullscreen...');
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          console.log('Using standard exitFullscreen');
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          console.log('Using webkit exitFullscreen');
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).msExitFullscreen) {
+          console.log('Using ms exitFullscreen');
+          await (document as any).msExitFullscreen();
+        }
+        console.log('Fullscreen exited successfully');
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.error('Fullscreen error:', error);
+      // Fallback: just toggle the state
+      setIsFullscreen(!isFullscreen);
+    }
   }, [isFullscreen]);
 
   const filteredInsights = insights.filter(insight => {
