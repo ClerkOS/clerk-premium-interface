@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 import { Input } from '@/components/ui/input';
+
+// Virtualization constants
+const CELL_WIDTH = 128; // w-32 = 128px
+const CELL_HEIGHT = 32; // h-8 = 32px
+const VIEWPORT_BUFFER = 5; // Extra cells to render for smooth scrolling
 
 interface SpreadsheetGridProps {
   className?: string;
@@ -10,7 +15,12 @@ interface SpreadsheetGridProps {
 export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [scroll, setScroll] = useState({ x: 0, y: 0 });
+  const [size, setSize] = useState({ width: 800, height: 400 });
+  
   const gridRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
   const { 
     workbook, 
     selectedCells, 
@@ -22,6 +32,83 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
   } = useSpreadsheetStore();
 
   const activeSheet = workbook?.sheets.find(s => s.id === workbook.activeSheetId);
+
+  // Virtualization math
+  // -------------------------
+  
+  // Number of rows/cols visible at once + buffer
+  const visibleCols = Math.ceil(size.width / CELL_WIDTH) + VIEWPORT_BUFFER;
+  const visibleRows = Math.ceil(size.height / CELL_HEIGHT) + VIEWPORT_BUFFER;
+
+  // Which row/col indexes to start rendering from
+  const startCol = Math.floor(scroll.x / CELL_WIDTH);
+  const startRow = Math.floor(scroll.y / CELL_HEIGHT);
+
+  // Pre-create the cell pool (reuse DOM nodes instead of creating new ones)
+  const cellPool = useMemo(() => {
+    const pool = [];
+    for (let i = 0; i < visibleRows * visibleCols; i++) {
+      pool.push({ row: 0, col: 0 });
+    }
+    return pool;
+  }, [visibleCols, visibleRows]);
+
+  // Update pool's actual row/col coordinates
+  for (let i = 0; i < cellPool.length; i++) {
+    const rowOffset = Math.floor(i / visibleCols);
+    const colOffset = i % visibleCols;
+    cellPool[i].row = startRow + rowOffset;
+    cellPool[i].col = startCol + colOffset;
+  }
+
+  // Current raw scroll values
+  const scrollX = scrollContainerRef.current?.scrollLeft ?? 0;
+  const scrollY = scrollContainerRef.current?.scrollTop ?? 0;
+
+  // Handle scroll events
+  const handleScroll = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const scrollLeft = scrollContainerRef.current.scrollLeft;
+      const scrollTop = scrollContainerRef.current.scrollTop;
+      setScroll({ x: scrollLeft, y: scrollTop });
+    }
+  }, []);
+
+  // Handle resize events
+  const handleResize = useCallback(() => {
+    if (gridRef.current) {
+      const rect = gridRef.current.getBoundingClientRect();
+      setSize({ width: rect.width, height: rect.height });
+    }
+  }, []);
+
+  // Set up scroll and resize listeners
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
+
+  useEffect(() => {
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [handleResize]);
+
+  // Update viewport in store when scroll changes
+  useEffect(() => {
+    const endCol = Math.min(startCol + visibleCols, 26);
+    const endRow = Math.min(startRow + visibleRows, activeSheet?.rows.length || 100);
+    
+    setGridViewport({
+      startRow,
+      endRow,
+      startCol,
+      endCol,
+    });
+  }, [startRow, startCol, visibleRows, visibleCols, activeSheet?.rows.length, setGridViewport]);
 
   // Handle cell click
   const handleCellClick = useCallback((cellId: string) => {
@@ -94,21 +181,11 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeCell, editingCell, activeSheet, selectCell, handleCellDoubleClick]);
 
-  // Generate column headers
-  const columnHeaders = Array.from({ length: 26 }, (_, i) => 
-    String.fromCharCode(65 + i)
-  );
-
   // Virtualization logic - only render visible cells
-  const visibleRows = activeSheet?.rows.slice(
+  const visibleRowsData = activeSheet?.rows.slice(
     gridViewport.startRow, 
     gridViewport.endRow
   ) || [];
-
-  const visibleColumns = columnHeaders.slice(
-    gridViewport.startCol,
-    gridViewport.endCol
-  );
 
   if (!activeSheet) {
     return (
@@ -122,54 +199,115 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
   }
 
   return (
-    <div className={`overflow-hidden border rounded-lg bg-background ${className}`}>
-      {/* Column headers */}
+    <div className={`overflow-hidden border-2 border-primary/20 rounded-lg bg-background shadow-sm ${className}`} ref={gridRef}>
+      {/* Virtualized Column headers */}
       <div className="flex border-b bg-grid-header sticky top-0 z-10">
         {/* Corner cell */}
         <div className="w-12 h-8 border-r grid-header flex items-center justify-center">
           <div className="w-3 h-3 bg-muted-foreground/20 rounded-sm" />
         </div>
         
-        {/* Column headers */}
-        {visibleColumns.map((header, index) => (
-          <motion.div
-            key={header}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.02 }}
-            className="w-32 h-8 grid-header flex items-center justify-center text-xs font-medium cursor-pointer hover:bg-grid-hover"
+        {/* Virtualized Column headers */}
+        <div className="flex-1 overflow-hidden relative">
+          <div 
+            className="flex"
+            style={{ 
+              width: `${26 * CELL_WIDTH}px`,
+              transform: `translateX(-${scroll.x}px)`
+            }}
           >
-            {header}
-          </motion.div>
-        ))}
+            {Array.from({ length: 26 }, (_, colIndex) => {
+              const header = String.fromCharCode(65 + colIndex);
+              
+              return (
+                <motion.div
+                  key={header}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: colIndex * 0.02 }}
+                  style={{
+                    width: `${CELL_WIDTH}px`,
+                  }}
+                  className="h-8 grid-header flex items-center justify-center text-xs font-medium cursor-pointer hover:bg-grid-hover border-r"
+                >
+                  {header}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Grid rows */}
-      <div className="overflow-auto max-h-96" ref={gridRef}>
-        {visibleRows.map((row, rowIndex) => (
-          <motion.div
-            key={row.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: rowIndex * 0.01 }}
-            className="flex"
+      {/* Virtualized Grid Container */}
+      <div className="flex">
+        {/* Row Headers */}
+        <div className="w-12 bg-grid-header border-r overflow-hidden virtualized-grid">
+          <div 
+            style={{
+              height: `${(activeSheet?.rows.length || 100) * CELL_HEIGHT}px`,
+              transform: `translateY(-${scroll.y}px)`
+            }}
           >
-            {/* Row header */}
-            <div className="w-12 h-8 grid-header flex items-center justify-center text-xs font-medium">
-              {gridViewport.startRow + rowIndex + 1}
-            </div>
+            {Array.from({ length: activeSheet?.rows.length || 100 }, (_, rowIndex) => {
+              return (
+                <div
+                  key={`row-header-${rowIndex}`}
+                  style={{
+                    height: `${CELL_HEIGHT}px`,
+                  }}
+                  className="grid-header flex items-center justify-center text-xs font-medium border-b"
+                >
+                  {rowIndex + 1}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-            {/* Row cells */}
-            {row.cells.slice(gridViewport.startCol, gridViewport.endCol).map((cell, cellIndex) => {
+        {/* Virtualized Grid */}
+        <div 
+          className="overflow-auto relative flex-1 virtualized-grid" 
+          ref={scrollContainerRef}
+          style={{
+            height: `${Math.min(size.height, 400)}px`,
+          }}
+        >
+          {/* Total grid size for proper scrolling */}
+          <div 
+            style={{
+              width: `${26 * CELL_WIDTH}px`,
+              height: `${(activeSheet?.rows.length || 100) * CELL_HEIGHT}px`,
+              position: 'relative'
+            }}
+          >
+            {/* Render only visible cells using the cell pool */}
+            {cellPool.map((cellPos, index) => {
+              const { row, col } = cellPos;
+              
+              // Skip if outside valid range
+              if (row >= (activeSheet?.rows.length || 0) || col >= 26) {
+                return null;
+              }
+
+              const cell = activeSheet?.rows[row]?.cells[col];
+              if (!cell) return null;
+
               const isSelected = selectedCells.includes(cell.id);
               const isActive = activeCell === cell.id;
               const isEditing = editingCell === cell.id;
 
               return (
                 <div
-                  key={cell.id}
+                  key={`${row}-${col}`}
+                  style={{
+                    position: 'absolute',
+                    left: `${col * CELL_WIDTH}px`,
+                    top: `${row * CELL_HEIGHT}px`,
+                    width: `${CELL_WIDTH}px`,
+                    height: `${CELL_HEIGHT}px`,
+                  }}
                   className={`
-                    w-32 h-8 grid-cell relative cursor-pointer transition-all duration-150
+                    grid-cell relative cursor-pointer transition-all duration-150 border-r border-b
                     ${isSelected ? 'grid-cell-selected' : ''}
                     ${isActive ? 'ring-2 ring-primary ring-offset-1' : ''}
                   `}
@@ -230,8 +368,8 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
                 </div>
               );
             })}
-          </motion.div>
-        ))}
+          </div>
+        </div>
       </div>
     </div>
   );

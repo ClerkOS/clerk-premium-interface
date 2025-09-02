@@ -4,6 +4,7 @@ import { SpreadsheetGrid } from '@/components/SpreadsheetGrid';
 import { FormulaBar } from '@/components/FormulaBar';
 import { SheetTabs } from '@/components/SheetTabs';
 import { UploadButton } from '@/components/UploadButton';
+import { NewWorkbookButton } from '@/components/NewWorkbookButton';
 import { AiCommandBar } from '@/components/AiCommandBar';
 import { FABInsights } from '@/components/FABInsights';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -26,7 +27,7 @@ export function SheetPage() {
           </div>
           <div>
             <h1 className="text-lg font-semibold">
-              {workbook?.name || 'AI Sparkle Sheets'}
+              {workbook?.name || 'Clerk'}
             </h1>
             {workbook && (
               <p className="text-sm text-muted-foreground">
@@ -37,7 +38,7 @@ export function SheetPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {!workbook && <UploadButton />}
+          {!workbook && <NewWorkbookButton />}
           <ThemeToggle />
         </div>
       </motion.header>
@@ -54,9 +55,10 @@ export function SheetPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="flex-1 p-4"
+              className="p-4"
+              style={{ height: '400px' }}
             >
-              <SpreadsheetGrid />
+              <SpreadsheetGrid className="h-full" />
             </motion.div>
 
             {/* Sheet tabs */}
@@ -79,7 +81,7 @@ export function SheetPage() {
               </motion.div>
               
               <h2 className="text-2xl font-semibold mb-3">
-                Welcome to AI Sparkle Sheets
+                Welcome to Clerk
               </h2>
               <p className="text-muted-foreground mb-8">
                 Upload your CSV or Excel files to get started with AI-powered spreadsheet analysis.
@@ -102,7 +104,7 @@ export function SheetPage() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="p-4"
+          className="p-4 border-t bg-card/50"
         >
           <AiCommandBar />
         </motion.div>
