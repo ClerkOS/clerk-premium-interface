@@ -42,16 +42,23 @@ export function FormulaBar({ className }: FormulaBarProps) {
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!activeCell || !formula.trim()) return;
+    if (!activeCell) return;
 
     // Determine if it's a formula (starts with =) or a value
     const isFormula = formula.trim().startsWith('=');
-    const value = isFormula ? formula.trim().slice(1) : formula.trim();
-    
-    // For now, just update with the raw value
-    // In a real implementation, you'd evaluate the formula
-    updateCell(activeCell, isFormula ? 0 : value, isFormula ? formula : undefined);
+    const raw = formula; // keep raw text visible until evaluation is implemented
+
+    // Update cell to reflect final input; evaluation can be added later
+    updateCell(activeCell, raw, isFormula ? raw : undefined);
   }, [activeCell, formula, updateCell]);
+
+  const handleChange = useCallback((value: string) => {
+    setFormula(value);
+    if (!activeCell) return;
+    // Live update: reflect text directly in the cell display
+    const isFormula = value.startsWith('=');
+    updateCell(activeCell, value, isFormula ? value : undefined);
+  }, [activeCell, updateCell]);
 
   const getCellReference = useCallback(() => {
     if (!activeCell) return '';
@@ -113,7 +120,7 @@ export function FormulaBar({ className }: FormulaBarProps) {
               <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 value={formula}
-                onChange={(e) => setFormula(e.target.value)}
+                onChange={(e) => handleChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder={activeCell ? "Enter formula or value..." : "Select a cell to edit"}
