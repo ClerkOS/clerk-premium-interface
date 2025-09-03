@@ -8,10 +8,10 @@ import { NewWorkbookButton } from '@/components/NewWorkbookButton';
 import { AiCommandBar } from '@/components/AiCommandBar';
 import { FABInsights } from '@/components/FABInsights';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { useSpreadsheetStore } from '@/store/spreadsheetStore';
+import { useSheetPage } from './hooks/useSheetPage';
 
 export function SheetPage() {
-  const { workbook, isLoading } = useSpreadsheetStore();
+  const { workbook, isLoading, sheetCountLabel, workbookName } = useSheetPage();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -26,12 +26,10 @@ export function SheetPage() {
             <FileText className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">
-              {workbook?.name || 'Clerk'}
-            </h1>
+            <h1 className="text-lg font-semibold">{workbookName}</h1>
             {workbook && (
               <p className="text-sm text-muted-foreground">
-                {workbook.sheets.length} sheet{workbook.sheets.length !== 1 ? 's' : ''}
+                {sheetCountLabel}
               </p>
             )}
           </div>

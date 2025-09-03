@@ -1,222 +1,51 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ArrowLeft, MessageSquare, Sparkles, Plus, MoreVertical, Share, Download, RefreshCw, ChevronRight, TrendingUp, AlertTriangle, CheckCircle, Code2, Send, Zap, Eye, BookOpen, BarChart3, X, Maximize2, Minimize2, Filter, Settings, Bell, User, HelpCircle, Copy } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useInsightsPage } from './hooks/useInsightsPage';
 
 const PremiumCursorInsights = () => {
-  const navigate = useNavigate();
-  const [chatInput, setChatInput] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedInsight, setSelectedInsight] = useState(0);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [hoveredCard, setHoveredCard] = useState(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [filterType, setFilterType] = useState('all');
-  const [isExporting, setIsExporting] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [chartHovered, setChartHovered] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
-  const chartRef = useRef(null);
-  const sidebarRef = useRef(null);
-  const notificationRef = useRef(null);
+  const {
+    // state
+    chatInput,
+    setChatInput,
+    isGenerating,
+    selectedInsight,
+    setSelectedInsight,
+    isLoaded,
+    hoveredCard,
+    setHoveredCard,
+    isFullscreen,
+    setIsFullscreen,
+    filterType,
+    setFilterType,
+    isExporting,
+    showNotifications,
+    setShowNotifications,
+    chartHovered,
+    setChartHovered,
+    sidebarCollapsed,
+    setSidebarCollapsed,
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+    // refs
+    chartRef,
+    sidebarRef,
+    notificationRef,
 
-  // Listen for fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
+    // data
+    insights,
+    currentInsight,
+    filteredInsights,
 
-    // Check if fullscreen API is available
-    console.log('Fullscreen API check:');
-    console.log('- Standard requestFullscreen:', !!document.documentElement.requestFullscreen);
-    console.log('- Webkit requestFullscreen:', !!(document.documentElement as any).webkitRequestFullscreen);
-    console.log('- MS requestFullscreen:', !!(document.documentElement as any).msRequestFullscreen);
-    console.log('- Document fullscreenElement:', document.fullscreenElement);
+    // handlers
+    handleSendMessage,
+    handleCopyQuery,
+    handleExport,
+    handleFullscreen,
+    goHome,
+  } = useInsightsPage();
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('msfullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
-  // Enhanced insights data with more interactive elements
-  const insights = [
-    {
-      id: 1,
-      title: "High debt-to-equity ratios in Technology sector",
-      confidence: "94%",
-      type: "warning",
-      description: "Technology companies show D/E of 2.31x, 44% above industry benchmark of 1.6x. This affects 23 companies worth $2.3M in exposure.",
-      impact: "High",
-      trend: "+12%",
-      affected: 23,
-      value: "$2.3M",
-      risk: "Elevated",
-      recommendation: "Consider debt restructuring or equity infusion",
-      sql: `SELECT 
-  sector, 
-  ROUND(AVG(debt/equity), 2) as avg_de_ratio,
-  COUNT(*) as company_count,
-  SUM(total_value) as total_exposure
-FROM financials 
-WHERE sector = 'Technology'
-GROUP BY sector
-HAVING AVG(debt/equity) > 1.6;`,
-      chart: "bar",
-      data: [
-        { name: 'Technology', value: 2.31, benchmark: 1.6, count: 23, risk: 'high' },
-        { name: 'Healthcare', value: 1.82, benchmark: 1.6, count: 18, risk: 'medium' },
-        { name: 'Finance', value: 1.45, benchmark: 1.6, count: 31, risk: 'low' },
-        { name: 'Manufacturing', value: 1.73, benchmark: 1.6, count: 15, risk: 'medium' }
-      ]
-    },
-    {
-      id: 2,
-      title: "Foreign currency concentration risk",
-      confidence: "91%",
-      type: "insight",
-      description: "64% of operations use non-USD currencies. EUR exposure represents 35% of foreign transactions, creating concentration risk worth $2.1M.",
-      impact: "Medium",
-      trend: "+8%",
-      affected: 89,
-      value: "$2.1M",
-      risk: "Moderate",
-      recommendation: "Implement currency hedging strategies",
-      sql: `SELECT 
-  foreign_currency, 
-  COUNT(*) as transaction_count,
-  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) as percentage,
-  SUM(total_value) as exposure_value
-FROM financials 
-WHERE foreign_currency != 'USD'
-GROUP BY foreign_currency
-ORDER BY exposure_value DESC;`,
-      chart: "pie",
-      data: [
-        { name: 'EUR', value: 35, exposure: 850000, color: '#3B82F6', risk: 'high' },
-        { name: 'GBP', value: 25, exposure: 720000, color: '#10B981', risk: 'medium' },
-        { name: 'JPY', value: 18, exposure: 480000, color: '#F59E0B', risk: 'medium' },
-        { name: 'CAD', value: 15, exposure: 250000, color: '#EF4444', risk: 'low' },
-        { name: 'Other', value: 7, exposure: 200000, color: '#8B5CF6', risk: 'low' }
-      ]
-    },
-    {
-      id: 3,
-      title: "Long-term cycles correlate with equity strength",
-      confidence: "89%",
-      type: "positive",
-      description: "Companies with business cycles >36 months show 23% higher equity ratios (avg 0.71 vs 0.58). 31 companies exhibit this pattern.",
-      impact: "Medium",
-      trend: "+23%",
-      affected: 31,
-      value: "0.71x",
-      risk: "Low",
-      recommendation: "Leverage long-term planning for equity optimization",
-      sql: `SELECT 
-  CASE 
-    WHEN no_of_months <= 24 THEN 'Short (≤24m)'
-    WHEN no_of_months <= 36 THEN 'Medium (25-36m)'
-    ELSE 'Long (>36m)'
-  END as cycle_category,
-  ROUND(AVG(equity), 3) as avg_equity_ratio,
-  COUNT(*) as company_count,
-  ROUND(STDDEV(equity), 3) as equity_volatility
-FROM financials
-GROUP BY cycle_category
-ORDER BY avg_equity_ratio DESC;`,
-      chart: "line",
-      data: [
-        { months: '12', equity: 0.45, count: 23, volatility: 0.12, trend: 'declining' },
-        { months: '24', equity: 0.52, count: 34, volatility: 0.09, trend: 'stable' },
-        { months: '36', equity: 0.58, count: 28, volatility: 0.08, trend: 'improving' },
-        { months: '48', equity: 0.67, count: 19, volatility: 0.06, trend: 'strong' },
-        { months: '60+', equity: 0.71, count: 12, volatility: 0.04, trend: 'excellent' }
-      ]
-    }
-  ];
-
-  const currentInsight = insights[selectedInsight];
-
-  const handleSendMessage = async () => {
-    if (!chatInput.trim()) return;
-    setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      setChatInput('');
-    }, 2000);
-  };
-
-  const handleCopyQuery = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(currentInsight.sql);
-      // Show success feedback
-    } catch (err) {
-      console.error('Failed to copy: ', err);
-    }
-  }, [currentInsight]);
-
-  const handleExport = useCallback(async () => {
-    setIsExporting(true);
-    setTimeout(() => setIsExporting(false), 2000);
-  }, []);
-
-  const handleFullscreen = useCallback(async () => {
-    console.log('Fullscreen button clicked! Current state:', isFullscreen);
-    try {
-      if (!isFullscreen) {
-        console.log('Attempting to enter fullscreen...');
-        // Enter fullscreen
-        if (document.documentElement.requestFullscreen) {
-          console.log('Using standard requestFullscreen');
-          await document.documentElement.requestFullscreen();
-        } else if ((document.documentElement as any).webkitRequestFullscreen) {
-          console.log('Using webkit requestFullscreen');
-          await (document.documentElement as any).webkitRequestFullscreen();
-        } else if ((document.documentElement as any).msRequestFullscreen) {
-          console.log('Using ms requestFullscreen');
-          await (document.documentElement as any).msRequestFullscreen();
-        }
-        console.log('Fullscreen entered successfully');
-        setIsFullscreen(true);
-      } else {
-        console.log('Attempting to exit fullscreen...');
-        // Exit fullscreen
-        if (document.exitFullscreen) {
-          console.log('Using standard exitFullscreen');
-          await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          console.log('Using webkit exitFullscreen');
-          await (document as any).webkitExitFullscreen();
-        } else if ((document as any).msExitFullscreen) {
-          console.log('Using ms exitFullscreen');
-          await (document as any).msExitFullscreen();
-        }
-        console.log('Fullscreen exited successfully');
-        setIsFullscreen(false);
-      }
-    } catch (error) {
-      console.error('Fullscreen error:', error);
-      // Fallback: just toggle the state
-      setIsFullscreen(!isFullscreen);
-    }
-  }, [isFullscreen]);
-
-  const filteredInsights = insights.filter(insight => {
-    const matchesFilter = filterType === 'all' || insight.type === filterType;
-    return matchesFilter;
-  });
+  // Data and handlers now come from the hook
 
   const InsightCard = ({ insight, isActive, onClick, index }) => (
     <div 
