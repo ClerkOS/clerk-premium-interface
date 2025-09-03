@@ -81,7 +81,7 @@ export function SheetPage() {
               </motion.div>
               
               <h2 className="text-2xl font-semibold mb-3">
-                Welcome to Clerk
+                Welcome to the Clerk Prototype
               </h2>
               <p className="text-muted-foreground mb-8">
                 Upload your CSV or Excel files to get started with AI-powered spreadsheet analysis.
