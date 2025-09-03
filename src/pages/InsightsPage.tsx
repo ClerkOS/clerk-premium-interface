@@ -378,7 +378,7 @@ const PremiumCursorInsights = () => {
           <div className="flex items-center gap-3 mb-6">
             <button 
               className="p-2 hover:bg-muted rounded-lg transition-all duration-300 group"
-              onClick={() => navigate('/')}
+              onClick={goHome}
             >
               <ArrowLeft size={18} className="text-muted-foreground group-hover:text-foreground transition-transform duration-300" />
             </button>
