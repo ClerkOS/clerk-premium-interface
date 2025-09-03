@@ -11,6 +11,8 @@ import { toast } from '@/hooks/use-toast';
 
 interface AiCommandBarProps {
   className?: string;
+  isExpanded?: boolean;
+  onToggleExpanded?: (expanded: boolean) => void;
 }
 
 export function AiCommandBar({ className }: AiCommandBarProps) {
