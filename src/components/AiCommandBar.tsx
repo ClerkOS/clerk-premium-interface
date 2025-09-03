@@ -11,8 +11,6 @@ import { toast } from '@/hooks/use-toast';
 
 interface AiCommandBarProps {
   className?: string;
-  isExpanded?: boolean;
-  onToggleExpanded?: (expanded: boolean) => void;
 }
 
 export function AiCommandBar({ className }: AiCommandBarProps) {
@@ -87,7 +85,7 @@ export function AiCommandBar({ className }: AiCommandBarProps) {
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
     >
       <Card className={`p-3 transition-all duration-200 ${isFocused ? 'command-glow' : ''}`}>
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2 pr-20 md:pr-24">
           <div className="relative flex-1">
             <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
