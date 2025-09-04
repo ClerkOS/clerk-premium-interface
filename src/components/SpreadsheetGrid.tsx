@@ -422,9 +422,6 @@ export function SpreadsheetGrid({ className }: SpreadsheetGridProps) {
         <div 
           className={`overflow-auto relative flex-1 virtualized-grid ${isDragging ? 'select-none' : ''}`}
           ref={scrollContainerRef}
-          style={{
-            height: `${size.height}px`,
-          }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
         >

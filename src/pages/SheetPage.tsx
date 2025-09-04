@@ -56,7 +56,7 @@ export function SheetPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
               className="p-4"
-              style={{ height: '400px' }}
+              style={{ height: 'calc(100vh - 200px)' }}
             >
               <SpreadsheetGrid className="h-full" />
             </motion.div>
@@ -98,17 +98,6 @@ export function SheetPage() {
         )}
       </div>
 
-      {/* AI Command Bar */}
-      {workbook && (
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="p-4 border-t bg-card/50"
-        >
-          <AiCommandBar />
-        </motion.div>
-      )}
 
       {/* FAB */}
       <FABInsights />
