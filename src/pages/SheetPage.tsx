@@ -7,6 +7,7 @@ import { UploadButton } from '@/components/UploadButton';
 import { NewWorkbookButton } from '@/components/NewWorkbookButton';
 import { FABInsights } from '@/components/FABInsights';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { HelpCommands } from '@/components/HelpCommands';
 import { Button } from '@/components/ui/button';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 import { useState, useEffect } from 'react';
@@ -17,6 +18,7 @@ function AiChatSidebar({ isOpen, onClose }) {
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const suggestions = [
     {
@@ -42,6 +44,12 @@ function AiChatSidebar({ isOpen, onClose }) {
       title: "Generate charts",
       description: "Create visualizations from your data",
       icon: "📈"
+    },
+    {
+      id: 5,
+      title: "Help",
+      description: "Show commands and shortcuts guide",
+      icon: "❓"
     }
   ];
 
@@ -56,6 +64,15 @@ function AiChatSidebar({ isOpen, onClose }) {
     };
     
     setMessages(prev => [...prev, newMessage]);
+    
+    // Check if user is asking for help
+    if (inputValue.toLowerCase().includes('help')) {
+      setShowHelp(true);
+      setInputValue('');
+      setShowSuggestions(false);
+      return;
+    }
+    
     setInputValue('');
     setShowSuggestions(false);
     
@@ -127,25 +144,46 @@ function AiChatSidebar({ isOpen, onClose }) {
 
           {/* Chat Messages */}
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
-            {messages.map((message) => (
+            {showHelp ? (
               <motion.div
-                key={message.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                className="space-y-4"
               >
-                <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                  message.type === 'user' 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted text-foreground'
-                }`}>
-                  <p className="leading-relaxed">{message.content}</p>
-                  <p className={`text-xs mt-1.5 opacity-60`}>
-                    {message.timestamp}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Help & Commands</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowHelp(false)}
+                    className="w-6 h-6 p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
                 </div>
+                <HelpCommands />
               </motion.div>
-            ))}
+            ) : (
+              messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                    message.type === 'user' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted text-foreground'
+                  }`}>
+                    <p className="leading-relaxed">{message.content}</p>
+                    <p className={`text-xs mt-1.5 opacity-60`}>
+                      {message.timestamp}
+                    </p>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
 
           {/* Chat Input */}
