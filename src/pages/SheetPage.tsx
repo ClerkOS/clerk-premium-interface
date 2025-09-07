@@ -9,19 +9,41 @@ import { FABInsights } from '@/components/FABInsights';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // AI Chat Sidebar Component
 function AiChatSidebar({ isOpen, onClose }) {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  const suggestions = [
     {
       id: 1,
-      type: 'ai',
-      content: 'Hello! I can help you analyze your data, create formulas, and answer questions about your spreadsheet. What would you like to explore?',
-      timestamp: new Date().toLocaleTimeString()
+      title: "Create a formula",
+      description: "Calculate totals, averages, or complex formulas",
+      icon: "📊"
+    },
+    {
+      id: 2,
+      title: "Analyze data",
+      description: "Find patterns, trends, and insights",
+      icon: "🔍"
+    },
+    {
+      id: 3,
+      title: "Format cells",
+      description: "Apply styling, colors, and formatting",
+      icon: "🎨"
+    },
+    {
+      id: 4,
+      title: "Generate charts",
+      description: "Create visualizations from your data",
+      icon: "📈"
     }
-  ]);
-  const [inputValue, setInputValue] = useState('');
+  ];
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
@@ -35,6 +57,7 @@ function AiChatSidebar({ isOpen, onClose }) {
     
     setMessages(prev => [...prev, newMessage]);
     setInputValue('');
+    setShowSuggestions(false);
     
     // Simulate AI response
     setTimeout(() => {
@@ -48,6 +71,38 @@ function AiChatSidebar({ isOpen, onClose }) {
     }, 1000);
   };
 
+  const handleInputClick = () => {
+    setShowSuggestions(true);
+    setIsInputFocused(true);
+  };
+
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+    if (e.target.value.length > 0) {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleInputFocus = () => {
+    setShowSuggestions(true);
+    setIsInputFocused(true);
+  };
+
+  const handleInputBlur = () => {
+    // Delay to allow clicking on suggestions
+    setTimeout(() => {
+      setIsInputFocused(false);
+      if (inputValue.length === 0) {
+        setShowSuggestions(false);
+      }
+    }, 200);
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setInputValue(suggestion.title + ": ");
+    setShowSuggestions(false);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -56,29 +111,22 @@ function AiChatSidebar({ isOpen, onClose }) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: -400, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed left-0 top-0 h-full w-96 bg-card/95 backdrop-blur-md border-r border-border z-30 flex flex-col"
+          className="fixed left-0 top-0 h-full w-80 bg-background border-r border-border z-30 flex flex-col shadow-xl"
         >
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm">AI Assistant</h3>
-                <p className="text-xs text-muted-foreground">Data analysis & insights</p>
-              </div>
-            </div>
-            <button
+          {/* Sidebar Header - Just Close Button */}
+          <div className="flex justify-end p-3">
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="w-8 h-8 rounded-lg hover:bg-accent flex items-center justify-center transition-colors"
+              className="w-7 h-7 p-0 hover:bg-accent"
             >
               <X className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
 
           {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
             {messages.map((message) => (
               <motion.div
                 key={message.id}
@@ -86,13 +134,13 @@ function AiChatSidebar({ isOpen, onClose }) {
                 animate={{ opacity: 1, y: 0 }}
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[80%] rounded-xl p-3 text-sm ${
+                <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                   message.type === 'user' 
                     ? 'bg-primary text-primary-foreground' 
-                    : 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-foreground'
                 }`}>
-                  <p>{message.content}</p>
-                  <p className={`text-xs mt-1 opacity-70`}>
+                  <p className="leading-relaxed">{message.content}</p>
+                  <p className={`text-xs mt-1.5 opacity-60`}>
                     {message.timestamp}
                   </p>
                 </div>
@@ -101,23 +149,69 @@ function AiChatSidebar({ isOpen, onClose }) {
           </div>
 
           {/* Chat Input */}
-          <div className="p-4 border-t border-border">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Ask about your data..."
-                className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!inputValue.trim()}
-                className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Send
-              </button>
+          <div className="border-t border-border bg-card/30">
+            {/* Suggestions */}
+            <AnimatePresence>
+              {showSuggestions && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-3 border-b border-border bg-muted/30">
+                    <p className="text-xs text-muted-foreground mb-3 font-medium">What would you like to do?</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {suggestions.map((suggestion, index) => (
+                        <motion.button
+                          key={suggestion.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="p-2 text-left bg-background border border-border rounded-md hover:bg-accent hover:border-primary/50 transition-all duration-200 group"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">{suggestion.icon}</span>
+                            <span className="text-xs font-medium text-foreground group-hover:text-primary">
+                              {suggestion.title}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-tight">
+                            {suggestion.description}
+                          </p>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Input Area */}
+            <div className="p-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onClick={handleInputClick}
+                  onFocus={handleInputFocus}
+                  onBlur={handleInputBlur}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask about your data..."
+                  className="flex-1 px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-colors cursor-text"
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!inputValue.trim()}
+                  size="sm"
+                  className="px-3 py-2 h-8"
+                >
+                  Send
+                </Button>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -129,6 +223,26 @@ function AiChatSidebar({ isOpen, onClose }) {
 export function SheetPage() {
   const { workbook, isLoading } = useSpreadsheetStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+F on Mac, Ctrl+F on Windows/Linux
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+      
+      // Escape to close search
+      if (e.key === 'Escape' && isSearchOpen) {
+        setIsSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -141,7 +255,7 @@ export function SheetPage() {
       {/* Main content with conditional margin */}
       <motion.div 
         animate={{ 
-          marginLeft: isSidebarOpen ? '384px' : '0px' 
+          marginLeft: isSidebarOpen ? '320px' : '0px' 
         }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className="flex flex-col min-h-screen"
@@ -262,6 +376,60 @@ export function SheetPage() {
           </motion.div>
         )}
       </motion.div>
+
+      {/* Search Dialog - Simple inline version */}
+      <AnimatePresence>
+        {isSearchOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              onClick={() => setIsSearchOpen(false)}
+            />
+            
+            {/* Dialog */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-20 left-1/2 transform -translate-x-1/2 w-full max-w-2xl mx-4 z-50"
+            >
+              <div className="bg-card border border-border rounded-lg shadow-xl p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <FileText className="w-5 h-5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search across all sheets..."
+                    className="flex-1 border-0 bg-transparent focus:outline-none text-lg"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setIsSearchOpen(false);
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsSearchOpen(false)}
+                    className="w-8 h-8 p-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="text-center text-muted-foreground py-8">
+                  <p>Search functionality coming soon!</p>
+                  <p className="text-xs mt-1">Press Cmd+F to open, Escape to close</p>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

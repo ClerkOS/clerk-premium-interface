@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, Edit3 } from 'lucide-react';
+import { Plus, X, Edit3, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,12 +12,18 @@ interface SheetTabsProps {
 export function SheetTabs({ className }: SheetTabsProps) {
   const [editingTab, setEditingTab] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [contextMenu, setContextMenu] = useState<{
+    sheetId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   
   const { 
     workbook, 
     setActiveSheet, 
     addSheet, 
-    removeSheet 
+    removeSheet,
+    duplicateSheet
   } = useSpreadsheetStore();
 
   if (!workbook || workbook.sheets.length === 0) {
@@ -52,6 +58,24 @@ export function SheetTabs({ className }: SheetTabsProps) {
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent, sheetId: string) => {
+    e.preventDefault();
+    setContextMenu({
+      sheetId,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  const handleDuplicateSheet = (sheetId: string) => {
+    duplicateSheet(sheetId);
+    setContextMenu(null);
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
   return (
     <div className={`flex items-center gap-1 p-2 border-t bg-card ${className}`}>
       <div className="flex items-center gap-1 overflow-x-auto">
@@ -75,6 +99,7 @@ export function SheetTabs({ className }: SheetTabsProps) {
                 `}
                 onClick={() => handleTabClick(sheet.id)}
                 onDoubleClick={() => handleTabDoubleClick(sheet.id, sheet.name)}
+                onContextMenu={(e) => handleContextMenu(e, sheet.id)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -140,6 +165,40 @@ export function SheetTabs({ className }: SheetTabsProps) {
           <Plus className="w-4 h-4" />
         </Button>
       </motion.div>
+
+      {/* Context Menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={closeContextMenu}
+            />
+            
+            {/* Context Menu */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ duration: 0.15 }}
+              className="fixed z-50 bg-card border border-border rounded-lg shadow-lg py-1 min-w-32"
+              style={{
+                left: contextMenu.x,
+                top: contextMenu.y,
+              }}
+            >
+              <button
+                onClick={() => handleDuplicateSheet(contextMenu.sheetId)}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2 transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+                Duplicate
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
