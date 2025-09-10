@@ -25,7 +25,7 @@ function AiChatSidebar({ isOpen, onClose }) {
       id: 1,
       title: "Create a formula",
       description: "Calculate totals, averages, or complex formulas",
-      icon: "📊"
+      icon: "∑"
     },
     {
       id: 2,
@@ -163,27 +163,36 @@ function AiChatSidebar({ isOpen, onClose }) {
                 </div>
                 <HelpCommands />
               </motion.div>
-            ) : (
-              messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                    message.type === 'user' 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-foreground'
-                  }`}>
-                    <p className="leading-relaxed">{message.content}</p>
-                    <p className={`text-xs mt-1.5 opacity-60`}>
-                      {message.timestamp}
-                    </p>
-                  </div>
-                </motion.div>
-              ))
-            )}
+             ) : (
+               messages.map((message) => (
+                 <motion.div
+                   key={message.id}
+                   initial={{ opacity: 0, y: 10 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   className="space-y-2"
+                 >
+                   {message.type === 'user' ? (
+                     <div className="flex justify-end">
+                       <div className="max-w-[85%] rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
+                         <p className="leading-relaxed">{message.content}</p>
+                         <p className="text-xs mt-1.5 opacity-60">
+                           {message.timestamp}
+                         </p>
+                       </div>
+                     </div>
+                   ) : (
+                     <div className="w-full">
+                       <div className="text-xs text-muted-foreground mb-1">
+                         AI Assistant • {message.timestamp}
+                       </div>
+                       <div className="bg-muted/50 rounded-lg p-3 text-sm leading-relaxed">
+                         <p className="whitespace-pre-wrap">{message.content}</p>
+                       </div>
+                     </div>
+                   )}
+                 </motion.div>
+               ))
+             )}
           </div>
 
           {/* Chat Input */}
