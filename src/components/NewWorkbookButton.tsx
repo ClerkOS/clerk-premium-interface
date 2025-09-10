@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
-import { FileSpreadsheet, Plus } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useCallback, useState } from 'react';
+import { FileSpreadsheet, Plus, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { ApiService, withRetry } from '@/lib/api';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 
 interface NewWorkbookButtonProps {
@@ -11,14 +12,40 @@ interface NewWorkbookButtonProps {
 }
 
 export function NewWorkbookButton({ className, variant = 'default' }: NewWorkbookButtonProps) {
+  const [isCreating, setIsCreating] = useState(false);
   const { setWorkbook, setLoading, setError } = useSpreadsheetStore();
 
-  const createNewWorkbook = useCallback(() => {
+  const createNewWorkbook = useCallback(async () => {
+    setIsCreating(true);
     setLoading(true);
     setError(null);
 
     try {
-      // Create a new empty workbook
+      // Try backend creation first
+      try {
+        const result = await withRetry(async () => {
+          return await ApiService.createWorkbook({
+            name: 'New Workbook',
+            sheets: [{
+              name: 'Sheet 1',
+              data: []
+            }]
+          });
+        });
+
+        if (result.success && result.data) {
+          setWorkbook(result.data);
+          toast({
+            title: "New workbook created",
+            description: "Start building your spreadsheet from scratch!",
+          });
+          return;
+        }
+      } catch (error) {
+        console.warn('Backend creation failed, falling back to client-side creation:', error);
+      }
+
+      // Fallback to client-side creation
       const newWorkbook = {
         id: `workbook-${Date.now()}`,
         name: 'New Workbook',
@@ -66,6 +93,7 @@ export function NewWorkbookButton({ className, variant = 'default' }: NewWorkboo
         variant: "destructive",
       });
     } finally {
+      setIsCreating(false);
       setLoading(false);
     }
   }, [setWorkbook, setLoading, setError]);
@@ -79,16 +107,34 @@ export function NewWorkbookButton({ className, variant = 'default' }: NewWorkboo
       <Button
         onClick={createNewWorkbook}
         variant={variant}
+        disabled={isCreating}
         className={className}
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Workbook</span>
-        </motion.div>
+        <AnimatePresence mode="wait">
+          {isCreating ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="flex items-center gap-2"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Creating...</span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="create"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Workbook</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Button>
     </motion.div>
   );

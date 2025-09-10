@@ -17,7 +17,7 @@ export function AiCommandBar({ className }: AiCommandBarProps) {
   const [input, setInput] = useState('');
   const [recognizedTokens, setRecognizedTokens] = useState<string[]>([]);
   const [isFocused, setIsFocused] = useState(false);
-  const { isAiProcessing, addAiCommand, addAiResponse, setAiProcessing } = useSpreadsheetStore();
+  const { workbook, isAiProcessing, addAiCommand, addAiResponse, setAiProcessing } = useSpreadsheetStore();
 
   // Recognize semantic tokens as user types
   useEffect(() => {
@@ -53,7 +53,15 @@ export function AiCommandBar({ className }: AiCommandBarProps) {
     setInput('');
 
     try {
-      const response = await AIService.processCommand(command);
+      // Get current sheet name for context
+      const currentSheet = workbook?.sheets.find(s => s.id === workbook.activeSheetId);
+      const sheetName = currentSheet?.name || 'Sheet 1';
+      
+      const response = await AIService.processCommand(
+        command, 
+        workbook?.id, 
+        sheetName
+      );
       addAiResponse(response);
       
       toast({

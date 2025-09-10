@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { HelpCommands } from '@/components/HelpCommands';
 import { Button } from '@/components/ui/button';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
+import { AIService } from '@/lib/ai';
 import { useState, useEffect } from 'react';
 
 // AI Chat Sidebar Component
@@ -53,7 +54,7 @@ function AiChatSidebar({ isOpen, onClose }) {
     }
   ];
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
     
     const newMessage = {
@@ -76,16 +77,41 @@ function AiChatSidebar({ isOpen, onClose }) {
     setInputValue('');
     setShowSuggestions(false);
     
-    // Simulate AI response
-    setTimeout(() => {
+    // Get AI response from backend
+    try {
+      const { workbook } = useSpreadsheetStore.getState();
+      const currentSheet = workbook?.sheets.find(s => s.id === workbook.activeSheetId);
+      const sheetName = currentSheet?.name || 'Sheet 1';
+      
+      const response = await AIService.processCommand(
+        {
+          id: `cmd-${Date.now()}`,
+          command: inputValue,
+          type: 'ask',
+          timestamp: new Date(),
+        },
+        workbook?.id,
+        sheetName
+      );
+
       const aiResponse = {
         id: messages.length + 2,
         type: 'ai',
-        content: 'I understand your request. Let me analyze the data and provide insights...',
+        content: response.response,
         timestamp: new Date().toLocaleTimeString()
       };
+      
       setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
+    } catch (error) {
+      console.error('AI response failed:', error);
+      const errorResponse = {
+        id: messages.length + 2,
+        type: 'ai',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    }
   };
 
   const handleInputClick = () => {

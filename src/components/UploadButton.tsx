@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { FileParser } from '@/lib/parsers';
+import { ApiService, withRetry } from '@/lib/api';
 import { useSpreadsheetStore } from '@/store/spreadsheetStore';
 
 interface UploadButtonProps {
@@ -24,6 +25,25 @@ export function UploadButton({ className, variant = 'default' }: UploadButtonPro
     setError(null);
 
     try {
+      // Try backend import first
+      try {
+        const result = await withRetry(async () => {
+          return await ApiService.importWorkbook(file);
+        });
+
+        if (result.success && result.data) {
+          setWorkbook(result.data);
+          toast({
+            title: "File uploaded successfully",
+            description: `${file.name} has been imported with ${result.data.sheets.length} sheet(s).`,
+          });
+          return;
+        }
+      } catch (error) {
+        console.warn('Backend import failed, falling back to client-side parsing:', error);
+      }
+
+      // Fallback to client-side parsing
       const result = await FileParser.parseFile(file);
       
       if (result.success && result.workbook) {

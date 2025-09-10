@@ -286,3 +286,4 @@ ORDER BY avg_equity_ratio DESC;`,
 
 
 
+
