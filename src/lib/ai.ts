@@ -1,86 +1,10 @@
 import { AICommand, AIResponse, Insight, ChartConfig } from '@/types';
-import { ApiService, withRetry } from './api';
 
-// AI service with backend integration
+// Stub AI service for natural language processing
 export class AIService {
-  static async processCommand(command: AICommand, workbookId?: string, sheetName?: string): Promise<AIResponse> {
-    // If we have backend connection, use real API
-    if (workbookId && sheetName) {
-      try {
-        const result = await withRetry(async () => {
-          return await ApiService.chatCompletion({
-            workbookId,
-            sheet: sheetName,
-            prompt: command.command,
-          });
-        });
-
-        if (result.success && result.data) {
-          return {
-            id: `response-${Date.now()}`,
-            commandId: command.id,
-            response: result.data.response || 'AI response received',
-            insights: result.data.insights || [],
-            charts: result.data.charts || [],
-            suggestions: result.data.suggestions || [],
-            actions: result.data.actions || [],
-            timestamp: new Date(),
-          };
-        }
-      } catch (error) {
-        console.warn('Backend AI service failed, falling back to mock:', error);
-      }
-    }
-
-    // Fallback to mock responses
-    return this.generateMockResponse(command);
-  }
-
-  static async naturalLanguageToFormula(
-    prompt: string, 
-    workbookId: string, 
-    sheetName: string
-  ): Promise<string> {
-    try {
-      const result = await withRetry(async () => {
-        return await ApiService.naturalLanguageToFormula({
-          workbookId,
-          sheet: sheetName,
-          prompt,
-        });
-      });
-
-      if (result.success && result.data) {
-        return result.data;
-      }
-    } catch (error) {
-      console.warn('Backend NL2F service failed, falling back to mock:', error);
-    }
-
-    // Fallback to mock formula generation
-    return this.generateMockFormula(prompt);
-  }
-
-  static async generateDataSummary(workbookId: string, sheetName: string): Promise<string> {
-    try {
-      const result = await withRetry(async () => {
-        return await ApiService.generateSummary(workbookId, sheetName);
-      });
-
-      if (result.success && result.data) {
-        return result.data;
-      }
-    } catch (error) {
-      console.warn('Backend summary service failed, falling back to mock:', error);
-    }
-
-    // Fallback to mock summary
-    return 'Data summary: 1,250 rows with 8 columns. Key metrics show 23% growth trend.';
-  }
-
-  private static generateMockResponse(command: AICommand): AIResponse {
+  static async processCommand(command: AICommand): Promise<AIResponse> {
     // Simulate processing delay
-    const delay = 1000 + Math.random() * 2000;
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
     
     const response: AIResponse = {
       id: `response-${Date.now()}`,
@@ -127,28 +51,6 @@ export class AIService {
     }
     
     return response;
-  }
-
-  private static generateMockFormula(prompt: string): string {
-    const lowerPrompt = prompt.toLowerCase();
-    
-    if (lowerPrompt.includes('sum') || lowerPrompt.includes('total')) {
-      return '=SUM(A1:A10)';
-    } else if (lowerPrompt.includes('average') || lowerPrompt.includes('mean')) {
-      return '=AVERAGE(A1:A10)';
-    } else if (lowerPrompt.includes('count')) {
-      return '=COUNT(A1:A10)';
-    } else if (lowerPrompt.includes('max')) {
-      return '=MAX(A1:A10)';
-    } else if (lowerPrompt.includes('min')) {
-      return '=MIN(A1:A10)';
-    } else if (lowerPrompt.includes('if')) {
-      return '=IF(A1>B1,"Yes","No")';
-    } else if (lowerPrompt.includes('vlookup')) {
-      return '=VLOOKUP(A1,Sheet2!A:B,2,FALSE)';
-    }
-    
-    return '=SUM(A1:A10)'; // Default formula
   }
   
   private static generateAskResponse(question: string): string {
